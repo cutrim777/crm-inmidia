@@ -4,7 +4,17 @@ Cópia do **wacrm** (github.com/ArnasDon/wacrm, licença MIT) no GitHub da In
 Mídia: **github.com/cutrim777/crm-inmidia**. Next.js na Vercel, Supabase como
 banco e login, conector MCP para o Claude.
 
-Endereço: `crm.inmidia.space`. O site leva `inmidia.space/crm` para lá.
+Endereço: **www.inmidia.space/crm** (login em `/crm/login`).
+
+Como funciona: o CRM é o projeto `crm-inmidia` na Vercel, publicado com
+`NEXT_PUBLIC_BASE_PATH=/crm`. O site (projeto `inmidia`) repassa tudo o que
+começa com `/crm` para ele, pela regra no `vercel.json` do site. Para quem
+usa, é um endereço só.
+
+Todo `git push` na `main` publica o CRM sozinho.
+
+Banco: Supabase `hfozbvdgwcgpuqyrfmfb` (org crm-inmidia). As 42 migrações do
+original + `043_inmidia_fecha_funcoes.sql` já estão aplicadas.
 
 ## Onde fica cada coisa
 
@@ -25,7 +35,7 @@ Configurações > Equipe. Um não vê o outro.
 
 ## Variáveis na Vercel
 
-Conectar o Supabase pela integração da Vercel preenche as três primeiras.
+Todas já estão na Vercel, menos `SUPABASE_SERVICE_ROLE_KEY`, que o Matheus cola (é a chave mestra do banco).
 
 | Variável | De onde vem |
 |---|---|
@@ -34,7 +44,8 @@ Conectar o Supabase pela integração da Vercel preenche as três primeiras.
 | `SUPABASE_SERVICE_ROLE_KEY` | idem (secreta) |
 | `ENCRYPTION_KEY` | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
 | `NEXT_PUBLIC_APP_LOCALE` | `pt` |
-| `NEXT_PUBLIC_SITE_URL` | `https://crm.inmidia.space` |
+| `NEXT_PUBLIC_BASE_PATH` | `/crm` |
+| `NEXT_PUBLIC_SITE_URL` | `https://www.inmidia.space/crm` |
 | `META_APP_SECRET` | só quando ligar o WhatsApp oficial |
 
 ## Banco
