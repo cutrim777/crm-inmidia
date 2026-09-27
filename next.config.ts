@@ -64,6 +64,9 @@ const SECURITY_HEADERS = [
 ] as const;
 
 const nextConfig: NextConfig = {
+  // In Mídia: o CRM mora em inmidia.space/crm (ver src/lib/base-path.ts).
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || undefined,
+
   // Emit a self-contained server bundle (.next/standalone) so the
   // Docker image can run without node_modules or the Next CLI.
   // Harmless outside Docker: `next start` keeps working as before.

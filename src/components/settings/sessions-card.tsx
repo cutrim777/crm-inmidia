@@ -22,6 +22,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { useTranslations } from 'next-intl';
+import { withBase } from "@/lib/base-path";
 
 export function SessionsCard() {
   const t = useTranslations('Settings.profile');
@@ -40,7 +41,7 @@ export function SessionsCard() {
         toast.error(t('signOutFailed', { message: error.message }));
         return;
       }
-      window.location.href = '/login';
+      window.location.href = withBase('/login');
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       toast.error(msg);

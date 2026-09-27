@@ -147,7 +147,21 @@ html[data-mode="light"] {
 
 /* ---- ACCENT: primary color ---- */
 
+/* In Mídia: verde #7AC70C, texto grafite #0F1114 sobre ele */
 :root,
+html[data-theme="inmidia"] {
+  --primary: oklch(0.75 0.206 132);
+  --primary-foreground: oklch(0.19 0.006 250);
+  --primary-hover: oklch(0.8 0.19 132);
+  --primary-soft: oklch(0.75 0.206 132 / 0.12);
+  --primary-soft-2: oklch(0.75 0.206 132 / 0.22);
+  --ring: oklch(0.75 0.206 132);
+  --chart-1: oklch(0.75 0.206 132);
+  --sidebar-primary: oklch(0.75 0.206 132);
+  --sidebar-primary-foreground: oklch(0.19 0.006 250);
+  --sidebar-ring: oklch(0.75 0.206 132);
+}
+
 html[data-theme="violet"] {
   --primary: oklch(0.526 0.247 293);
   --primary-foreground: oklch(0.985 0 0);

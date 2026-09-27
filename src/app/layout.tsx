@@ -4,6 +4,7 @@ import { getLocale, getMessages } from 'next-intl/server';
 import { Inter } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { BasePathFetch } from "@/components/base-path-fetch";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ThemedToaster } from "@/components/themed-toaster";
 import {
@@ -29,9 +30,6 @@ export const metadata: Metadata = {
   robots: {
     index: false,
     follow: false,
-  },
-  icons: {
-    icon: [{ url: "/icon" }],
   },
   formatDetection: {
     email: false,
@@ -108,6 +106,7 @@ export default async function RootLayout({
         />
       </head>
       <body className="min-h-full bg-background text-foreground font-sans">
+        <BasePathFetch />
         <NextIntlClientProvider messages={messages} locale={locale}>
           <ThemeProvider>
             {children}

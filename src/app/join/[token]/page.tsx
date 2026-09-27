@@ -53,6 +53,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
+import { withBase } from "@/lib/base-path";
 
 interface PeekOk {
   ok: true;
@@ -181,7 +182,7 @@ export default function JoinPage() {
       toast.success(t('welcome'));
       // Full reload (not router.push) so AuthProvider re-fetches
       // the profile with the new account_id and account_role.
-      window.location.href = '/dashboard';
+      window.location.href = withBase('/dashboard');
     } catch (err) {
       console.error('[join] redeem error:', err);
       toast.error(t('serverUnreachable'));
