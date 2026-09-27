@@ -50,7 +50,7 @@ Todas já estão na Vercel, menos `SUPABASE_SERVICE_ROLE_KEY`, que o Matheus col
 
 ## Banco
 
-As tabelas estão em `supabase/migrations/` (001 a 034), em ordem.
+As tabelas estão em `supabase/migrations/` (001 a 043), em ordem.
 
 ## Testes
 
