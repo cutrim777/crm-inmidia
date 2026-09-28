@@ -74,3 +74,20 @@ reaproveitado.
 git remote add original https://github.com/ArnasDon/wacrm.git
 git fetch original && git merge original/main
 ```
+
+## Formulários ligados ao CRM
+
+Cada formulário tem uma fonte na tabela `lead_sources` (token público, só
+cria lead). A rota é `POST /crm/api/v1/leads/<token>`: aceita JSON ou
+formulário comum, entende nome/telefone/whatsapp/email/empresa em vários
+nomes, completa o +55, não duplica contato, põe as etiquetas da fonte,
+guarda o resto numa nota e abre card na etapa "Novo lead" do funil.
+
+| Formulário | Onde está o envio | Funil |
+|---|---|---|
+| In Mídia /consultoria, /aulagratis, /clinicasmedicas, /ia, /iaclinicas | `site/src/lib/crm.ts` + cada formulário | Funil de vendas In Mídia |
+| Santiago Freire (home) | `clientes/Santiago Freire/index.html`, função `enviarWhatsApp` | Cliente: Santiago Freire |
+
+O envio ao CRM não espera resposta: o formulário segue igual (banco da
+Lovable, CAPI, página de obrigado, WhatsApp). Formulários sem telefone
+(Mercato, quizzes do Low Ticket) não entram: o CRM exige telefone.
