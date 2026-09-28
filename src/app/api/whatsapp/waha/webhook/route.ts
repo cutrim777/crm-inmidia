@@ -5,6 +5,9 @@ import { parseAppSecrets } from '@/lib/whatsapp/webhook-signature'
 import { paraFormatoMeta, type WahaEvento } from '@/lib/whatsapp/waha-convert'
 import { segredoDaPonteConfere } from '@/lib/whatsapp/ponte-auth'
 import { withBase } from '@/lib/base-path'
+import { WAHA_PREFIXO, idCurto, telefoneDe } from '@/lib/whatsapp/waha'
+import { resolveConversationByPhone } from '@/lib/whatsapp/resolve-conversation'
+import { textoDaMensagem } from '@/lib/whatsapp/waha-convert'
 
 /**
  * In Mídia: porta de entrada do WhatsApp por QR code.
@@ -36,6 +39,50 @@ async function entregar(origem: string, corpoMeta: Record<string, unknown>) {
   if (!r.ok) console.error('[waha] entrega ao webhook falhou:', r.status, await r.text().catch(() => ''))
 }
 
+/**
+ * Mensagem que o dono do número mandou pelo celular (ou pelo WhatsApp do
+ * computador), fora do CRM. Entra na conversa como mensagem da equipe,
+ * para o histórico ficar inteiro.
+ */
+async function registrarMinha(ev: WahaEvento) {
+  const p = (ev.payload ?? {}) as Record<string, unknown>
+  const id = typeof p.id === 'string' ? idCurto(p.id) : null
+  const para = typeof p.to === 'string' ? telefoneDe(p.to) : ''
+  if (!ev.session || !id || !para) return
+  const db = supabaseAdmin()
+  const { data: config } = await db
+    .from('whatsapp_config')
+    .select('account_id')
+    .eq('phone_number_id', `${WAHA_PREFIXO}${ev.session}`)
+    .maybeSingle()
+  if (!config) return
+  const { data: ja } = await db.from('messages').select('id').eq('message_id', id).limit(1)
+  if (ja?.length) return
+
+  const { conversationId } = await resolveConversationByPhone(db, config.account_id as string, `+${para}`)
+  const quando = typeof p.timestamp === 'number' ? new Date(p.timestamp * 1000).toISOString() : new Date().toISOString()
+  const texto = textoDaMensagem(p)
+  const { error } = await db.from('messages').insert({
+    conversation_id: conversationId,
+    sender_type: 'agent',
+    content_type: 'text',
+    content_text: texto,
+    message_id: id,
+    status: 'sent',
+    created_at: quando,
+  })
+  if (error) {
+    console.error('[waha] mensagem do celular não foi gravada:', error.message)
+    return
+  }
+  // só mexe no "última mensagem" se esta for mais nova
+  await db
+    .from('conversations')
+    .update({ last_message_text: texto, last_message_at: quando, updated_at: new Date().toISOString() })
+    .eq('id', conversationId)
+    .or(`last_message_at.is.null,last_message_at.lt.${quando}`)
+}
+
 export async function POST(request: Request) {
   if (!segredoDaPonteConfere(request.headers.get('x-crm-segredo'))) {
     return NextResponse.json({ erro: 'não autorizado' }, { status: 401 })
@@ -50,6 +97,10 @@ export async function POST(request: Request) {
 
   after(async () => {
     try {
+      if (ev.event === 'message.own') {
+        await registrarMinha(ev)
+        return
+      }
       // a ponte pode reenviar o mesmo evento se a rede falhar: não duplica
       const id = typeof ev.payload?.id === 'string' ? ev.payload.id : null
       if (ev.event === 'message' && id) {
