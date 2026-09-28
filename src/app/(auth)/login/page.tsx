@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { UsersRound } from "lucide-react";
 import { LogoIn } from "@/components/logo-in";
+import { withBase } from "@/lib/base-path";
 
 // `useSearchParams` opts the component out of static prerendering
 // unless it sits under a Suspense boundary. We split the form into
@@ -72,7 +73,7 @@ function LoginPageInner() {
     const destination = inviteToken
       ? `/join/${encodeURIComponent(inviteToken)}`
       : "/dashboard";
-    window.location.href = destination;
+    window.location.href = withBase(destination);
   };
 
   return (
