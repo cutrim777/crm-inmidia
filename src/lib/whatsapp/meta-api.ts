@@ -826,7 +826,7 @@ export async function sendReactionMessage(
   args: SendReactionMessageArgs
 ): Promise<MetaSendResult> {
   if (ehWaha(args.phoneNumberId)) {
-    return reagir(sessaoDe(args.phoneNumberId), args.targetMessageId, args.emoji)
+    return reagir(sessaoDe(args.phoneNumberId), args.targetMessageId, args.emoji, args.to)
   }
   const { phoneNumberId, accessToken, to, targetMessageId, emoji } = args
   const url = `${META_API_BASE}/${phoneNumberId}/messages`
@@ -882,7 +882,7 @@ export async function sendTypingIndicator(
   if (ehWaha(args.phoneNumberId)) {
     const chat = chatIdDoMessageId(args.messageId)
     if (chat) {
-      await marcarLida(sessaoDe(args.phoneNumberId), chat)
+      await marcarLida(sessaoDe(args.phoneNumberId), args.messageId)
       await digitando(sessaoDe(args.phoneNumberId), chat)
     }
     return

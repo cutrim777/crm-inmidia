@@ -17,6 +17,7 @@ type Estado =
   | { tipo: "iniciando" }
   | { tipo: "qr"; qr: string }
   | { tipo: "conectado"; numero: string | null; nome: string | null }
+  | { tipo: "ponteDesligada"; mensagem: string }
   | { tipo: "erro"; mensagem: string };
 
 export function WhatsAppQrCard() {
@@ -39,6 +40,9 @@ export function WhatsAppQrCard() {
         return setEstado({ tipo: "conectado", numero: d.numero, nome: d.nome });
       }
       if (d.status === "SCAN_QR_CODE" && d.qr) return setEstado({ tipo: "qr", qr: d.qr });
+      if (d.status === "PONTE_OFFLINE") {
+        return setEstado({ tipo: "ponteDesligada", mensagem: d.erro ?? "O programa do WhatsApp não está rodando agora." });
+      }
       if (d.status === "NAO_INICIADA" || d.status === "STOPPED" || d.status === "FAILED") {
         parar();
         return setEstado({ tipo: "desconectado" });
@@ -60,7 +64,7 @@ export function WhatsAppQrCard() {
   }, [consultar]);
 
   useEffect(() => {
-    if (estado.tipo === "qr" || estado.tipo === "iniciando") {
+    if (estado.tipo === "qr" || estado.tipo === "iniciando" || estado.tipo === "ponteDesligada") {
       if (!timer.current) acompanhar();
     }
   }, [estado.tipo, acompanhar]);
@@ -126,9 +130,18 @@ export function WhatsAppQrCard() {
           </div>
         )}
 
+        {estado.tipo === "ponteDesligada" && (
+          <div className="space-y-2">
+            <p className="text-amber-400">{estado.mensagem}</p>
+            <p className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" /> Esperando a ponte do WhatsApp voltar...
+            </p>
+          </div>
+        )}
+
         {estado.tipo === "iniciando" && (
           <p className="flex items-center gap-2 text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin" /> Preparando o QR code...
+            <Loader2 className="h-4 w-4 animate-spin" /> Preparando o QR code (leva até 30 segundos)...
           </p>
         )}
 

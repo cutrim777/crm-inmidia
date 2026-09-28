@@ -7,46 +7,39 @@ import {
   WahaError,
   desconectarSessao,
   iniciarSessao,
-  qrDaSessao,
+  ponteOnline,
   sessaoDaConta,
   statusDaSessao,
 } from '@/lib/whatsapp/waha'
-import { withBase } from '@/lib/base-path'
 
 /**
  * In Mídia: botão "Conectar por QR code" de Configurações > WhatsApp.
  *
- *   POST   liga a sessão da conta no WAHA e grava a conexão no CRM
- *   GET    situação da sessão e, enquanto não conecta, o QR code
- *   DELETE desconecta o número
+ *   POST   pede à ponte para ligar o número da conta e grava a conexão
+ *   GET    situação: ponte fora do ar, QR code para escanear ou conectado
+ *   DELETE pede à ponte para desconectar o número
  *
- * A chave do WAHA fica só no servidor; o navegador nunca vê.
+ * O CRM não fala com a ponte direto: deixa o pedido em whatsapp_sessoes e
+ * a ponte busca em /api/whatsapp/ponte/pendencias.
  */
-
-function urlDoWebhook(request: Request): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') || new URL(request.url).origin + withBase('')
-  return `${base}/api/whatsapp/waha/webhook`
-}
 
 function erro(e: unknown) {
   if (e instanceof WahaError) return NextResponse.json({ erro: e.message }, { status: 502 })
   return toErrorResponse(e)
 }
 
-export async function POST(request: Request) {
+export async function POST() {
   try {
     const ctx = await requireRole('admin')
-    const segredo = process.env.WAHA_WEBHOOK_SECRET
-    if (!segredo) return NextResponse.json({ erro: 'WAHA_WEBHOOK_SECRET não configurado no servidor.' }, { status: 500 })
     const sessao = sessaoDaConta(ctx.accountId)
-    await iniciarSessao(sessao, urlDoWebhook(request), segredo)
+    await iniciarSessao(sessao, ctx.accountId)
 
     const db = supabaseAdmin()
     const linha = {
       phone_number_id: `${WAHA_PREFIXO}${sessao}`,
       waba_id: null,
-      // o envio pelo WAHA usa a chave do servidor; este campo só precisa existir
-      access_token: encrypt('waha'),
+      // o envio pela ponte não usa token; este campo só precisa existir
+      access_token: encrypt('ponte'),
       status: 'disconnected',
     }
     const { data: atual } = await db.from('whatsapp_config').select('id').eq('account_id', ctx.accountId).maybeSingle()
@@ -69,16 +62,17 @@ export async function GET() {
     const sessao = sessaoDaConta(ctx.accountId)
     const st = await statusDaSessao(sessao)
     if (!st) return NextResponse.json({ status: 'NAO_INICIADA' })
-    if (st.status === 'WORKING') {
-      await supabaseAdmin()
-        .from('whatsapp_config')
-        .update({ status: 'connected', connected_at: new Date().toISOString() })
-        .eq('account_id', ctx.accountId)
-        .eq('phone_number_id', `${WAHA_PREFIXO}${sessao}`)
-      return NextResponse.json({ status: 'WORKING', numero: st.me?.id?.split('@')[0] ?? null, nome: st.me?.pushName ?? null })
+    if (!(await ponteOnline())) {
+      return NextResponse.json({
+        status: 'PONTE_OFFLINE',
+        erro: 'O programa do WhatsApp (a ponte) não está rodando agora. Com o Mac ligado e conectado à internet, esta tela continua sozinha.',
+      })
     }
-    if (st.status === 'SCAN_QR_CODE') {
-      return NextResponse.json({ status: st.status, qr: await qrDaSessao(sessao) })
+    if (st.status === 'WORKING') {
+      return NextResponse.json({ status: 'WORKING', numero: st.numero ?? null, nome: st.nome ?? null })
+    }
+    if (st.status === 'SCAN_QR_CODE' && st.qr) {
+      return NextResponse.json({ status: st.status, qr: st.qr })
     }
     return NextResponse.json({ status: st.status })
   } catch (e) {

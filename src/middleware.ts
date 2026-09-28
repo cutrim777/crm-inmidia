@@ -84,8 +84,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // API routes that need auth (not webhooks)
+  // (In Mídia: a ponte do WhatsApp entra com segredo próprio em /ponte/)
   if (!user && request.nextUrl.pathname.startsWith('/api/whatsapp/') &&
-      !request.nextUrl.pathname.includes('/webhook')) {
+      !request.nextUrl.pathname.includes('/webhook') &&
+      !request.nextUrl.pathname.startsWith('/api/whatsapp/ponte/')) {
     return withRefreshedCookies(
       NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
     )

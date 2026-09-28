@@ -1,18 +1,23 @@
 /**
- * In Mídia: WhatsApp sem API oficial, pelo WAHA (github.com/devlikeapro/waha).
+ * In Mídia: WhatsApp sem API oficial, por QR code, pela PONTE.
  *
  * O CRM foi feito para a API oficial da Meta. Para não reescrever nada,
- * um número do WAHA vira uma linha comum em `whatsapp_config`, com
- * `phone_number_id = "waha:<sessão>"`. A partir daí:
+ * um número conectado por QR vira uma linha comum em `whatsapp_config`,
+ * com `phone_number_id = "waha:<sessão>"` (o prefixo ficou do primeiro
+ * desenho, com o WAHA). A partir daí:
  *
- *   - envio: as funções de meta-api.ts olham o prefixo e desviam para cá;
- *   - recebimento: /api/whatsapp/waha/webhook traduz o evento do WAHA para
- *     o formato da Meta e entrega na porta de sempre (/api/whatsapp/webhook).
+ *   - envio: as funções de meta-api.ts olham o prefixo e desviam para cá.
+ *     Aqui o pedido vai para a caixa de saída (tabela whatsapp_saida) e o
+ *     CRM espera a ponte mandar e devolver o id da mensagem;
+ *   - recebimento: a ponte manda cada evento para /api/whatsapp/waha/webhook,
+ *     que traduz para o formato da Meta e entrega na porta de sempre.
  *
- * O servidor WAHA é um só para todas as contas (env WAHA_URL + WAHA_API_KEY);
- * cada conta tem a sua sessão (um número de WhatsApp por conta).
+ * A ponte é o programa `Empresas/In Mídia/crm-whatsapp` (Baileys). Ela roda
+ * num computador sempre ligado (hoje o Mac do Matheus) e só faz conexões de
+ * saída: ninguém precisa abrir porta nenhuma para ela.
  */
 import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
+import { supabaseAdmin } from '@/lib/flows/admin-client'
 
 export const WAHA_PREFIXO = 'waha:'
 
@@ -25,10 +30,9 @@ export const sessaoDe = (phoneNumberId: string): string => phoneNumberId.slice(W
 export const sessaoDaConta = (accountId: string): string => `crm-${accountId.replace(/-/g, '').slice(0, 12)}`
 
 /**
- * Id curto da mensagem. O WAHA devolve ora o id completo
- * ("true_5562...@c.us_3EB0ABC"), ora só o final ("3EB0ABC"), conforme o
- * motor. O CRM guarda sempre o final nas mensagens enviadas, para a
- * confirmação de entrega/leitura casar com o envio.
+ * Id curto da mensagem. Na recebida o CRM guarda o id completo
+ * ("false_5562...@c.us_3EB0ABC"); na enviada, só o final ("3EB0ABC"),
+ * para a confirmação de entrega/leitura casar com o envio.
  */
 export function idCurto(id: string): string {
   const partes = id.split('_')
@@ -42,46 +46,6 @@ export class WahaError extends Error {
   }
 }
 
-function config() {
-  const url = process.env.WAHA_URL?.replace(/\/+$/, '')
-  const key = process.env.WAHA_API_KEY
-  if (!url || !key) throw new WahaError('WhatsApp por QR code não está configurado no servidor (WAHA_URL / WAHA_API_KEY).')
-  return { url, key }
-}
-
-export async function waha<T = unknown>(
-  metodo: 'GET' | 'POST' | 'PUT' | 'DELETE',
-  caminho: string,
-  corpo?: unknown,
-  aceitar = 'application/json'
-): Promise<T> {
-  const { url, key } = config()
-  let r: Response
-  try {
-    r = await fetch(`${url}${caminho}`, {
-      method: metodo,
-      headers: { 'X-Api-Key': key, 'Content-Type': 'application/json', Accept: aceitar },
-      body: corpo === undefined ? undefined : JSON.stringify(corpo),
-      cache: 'no-store',
-      signal: AbortSignal.timeout(15000),
-    })
-  } catch {
-    throw new WahaError(
-      'O servidor do WhatsApp não respondeu. Se ele ainda não foi instalado, é isso: falta subir o servidor (whats.inmidia.space).',
-      503
-    )
-  }
-  if (!r.ok) {
-    const txt = await r.text().catch(() => '')
-    throw new WahaError(`WAHA ${metodo} ${caminho} ${r.status}: ${txt.slice(0, 300)}`, r.status)
-  }
-  if (aceitar !== 'application/json') return (await r.arrayBuffer()) as T
-  const txt = await r.text()
-  return (txt ? JSON.parse(txt) : {}) as T
-}
-
-/* ------------------------------------------------------------ telefone */
-
 /** "5562999990000" ou "+55 62 ..." -> "5562999990000@c.us". */
 export function chatIdDe(telefone: string): string {
   if (telefone.includes('@')) return telefone
@@ -94,23 +58,70 @@ export function telefoneDe(chatId: string): string {
 }
 
 /**
- * O WhatsApp guarda alguns números antigos do Brasil sem o 9 da frente.
- * Antes de mandar, pergunta ao WAHA qual é o chatId de verdade.
- * Se o WAHA não souber responder, usa o número como veio.
+ * Botões e listas não existem no WhatsApp comum de forma confiável.
+ * Viram texto com as opções numeradas.
  */
-export async function chatIdVerificado(sessao: string, telefone: string): Promise<string> {
-  if (telefone.includes('@')) return telefone
-  try {
-    const r = await waha<{ numberExists?: boolean; chatId?: string }>(
-      'GET',
-      `/api/contacts/check-exists?phone=${encodeURIComponent(telefone.replace(/\D/g, ''))}&session=${encodeURIComponent(sessao)}`
+export function textoDeOpcoes(corpo: string, opcoes: string[], rodape?: string): string {
+  const linhas = [corpo.trim(), '', ...opcoes.map((o, i) => `${i + 1}. ${o}`)]
+  if (rodape?.trim()) linhas.push('', rodape.trim())
+  return linhas.join('\n')
+}
+
+/* ------------------------------------------------------------ caixa de saída */
+
+const ESPERA_MAX_MS = 25_000
+const PONTE_VIVA_MS = 90_000
+
+const pausa = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+/** A ponte deu sinal de vida há pouco? */
+export async function ponteOnline(): Promise<boolean> {
+  const { data } = await supabaseAdmin().from('whatsapp_ponte').select('visto_em').eq('id', 1).maybeSingle()
+  const visto = data?.visto_em ? new Date(data.visto_em as string).getTime() : 0
+  return Date.now() - visto < PONTE_VIVA_MS
+}
+
+type TipoEnvio = 'texto' | 'midia' | 'visto' | 'digitando' | 'reacao'
+
+async function enfileirar(sessao: string, tipo: TipoEnvio, dados: Record<string, unknown>): Promise<string> {
+  const { data, error } = await supabaseAdmin()
+    .from('whatsapp_saida')
+    .insert({ sessao, tipo, dados })
+    .select('id')
+    .single()
+  if (error || !data) throw new WahaError(`Não foi possível pôr a mensagem na fila: ${error?.message ?? 'sem resposta'}`)
+  return data.id as string
+}
+
+/** Pede à ponte e espera ela responder com o id da mensagem. */
+async function pedirEEsperar(sessao: string, tipo: TipoEnvio, dados: Record<string, unknown>): Promise<{ messageId: string }> {
+  if (!(await ponteOnline())) {
+    throw new WahaError(
+      'O WhatsApp do CRM está desligado agora: o programa da ponte não está rodando (Mac desligado ou sem internet). A mensagem não foi enviada.',
+      503
     )
-    if (r.numberExists && r.chatId) return r.chatId
-    if (r.numberExists === false) throw new WahaError('Esse número não tem WhatsApp.', 400)
-  } catch (e) {
-    if (e instanceof WahaError && e.status === 400) throw e
   }
-  return chatIdDe(telefone)
+  const id = await enfileirar(sessao, tipo, dados)
+  const db = supabaseAdmin()
+  const inicio = Date.now()
+  while (Date.now() - inicio < ESPERA_MAX_MS) {
+    await pausa(400)
+    const { data } = await db.from('whatsapp_saida').select('status, message_id, erro').eq('id', id).maybeSingle()
+    if (data?.status === 'ok') return { messageId: (data.message_id as string) || `ponte-${id}` }
+    if (data?.status === 'erro') throw new WahaError((data.erro as string) || 'O WhatsApp recusou o envio.', 502)
+  }
+  // ninguém pegou: desiste (a ponte não manda mais esse item)
+  await db.from('whatsapp_saida').update({ status: 'expirado', atualizado_em: new Date().toISOString() }).eq('id', id).eq('status', 'pendente')
+  throw new WahaError('A ponte do WhatsApp não respondeu a tempo. A mensagem não foi enviada; tente de novo.', 504)
+}
+
+/** Pedido que não precisa de resposta (visto, digitando). */
+async function pedirSemEsperar(sessao: string, tipo: TipoEnvio, dados: Record<string, unknown>): Promise<void> {
+  try {
+    await enfileirar(sessao, tipo, dados)
+  } catch {
+    // aviso de leitura/digitando nunca pode derrubar uma resposta
+  }
 }
 
 /* ------------------------------------------------------------ envio */
@@ -121,14 +132,7 @@ export async function enviarTexto(
   texto: string,
   responderA?: string
 ): Promise<{ messageId: string }> {
-  const chatId = await chatIdVerificado(sessao, telefone)
-  const r = await waha<{ id?: string | { _serialized?: string }; key?: { id?: string } }>('POST', '/api/sendText', {
-    session: sessao,
-    chatId,
-    text: texto,
-    ...(responderA ? { reply_to: responderA } : {}),
-  })
-  return { messageId: idDaResposta(r) }
+  return pedirEEsperar(sessao, 'texto', { telefone, texto, ...(responderA ? { responderA } : {}) })
 }
 
 export type TipoMidia = 'image' | 'video' | 'document' | 'audio'
@@ -140,97 +144,70 @@ export async function enviarMidia(
   arquivo: { url: string; mimetype?: string; filename?: string },
   legenda?: string
 ): Promise<{ messageId: string }> {
-  // o arquivo é baixado pelo servidor do WAHA: só endereço público https
+  // quem baixa o arquivo é a ponte: só endereço público https
   if (!/^https:\/\//i.test(arquivo.url) || !(await isDeliverableUrl(arquivo.url))) {
     throw new WahaError('O arquivo precisa estar num endereço público (https).', 400)
   }
-  const chatId = await chatIdVerificado(sessao, telefone)
-  const rota = { image: '/api/sendImage', video: '/api/sendVideo', document: '/api/sendFile', audio: '/api/sendVoice' }[tipo]
-  const r = await waha<Record<string, unknown>>('POST', rota, {
-    session: sessao,
-    chatId,
-    file: arquivo,
-    ...(legenda ? { caption: legenda } : {}),
-  })
-  return { messageId: idDaResposta(r) }
+  return pedirEEsperar(sessao, 'midia', { telefone, tipo, ...arquivo, ...(legenda ? { legenda } : {}) })
 }
 
-export async function marcarLida(sessao: string, telefone: string): Promise<void> {
-  await waha('POST', '/api/sendSeen', { session: sessao, chatId: chatIdDe(telefone) }).catch(() => {})
+/** Marca como lida a mensagem recebida (id completo "false_..."). */
+export async function marcarLida(sessao: string, messageId: string): Promise<void> {
+  await pedirSemEsperar(sessao, 'visto', { messageId })
 }
 
 export async function digitando(sessao: string, telefone: string): Promise<void> {
-  await waha('POST', '/api/startTyping', { session: sessao, chatId: chatIdDe(telefone) }).catch(() => {})
+  await pedirSemEsperar(sessao, 'digitando', { telefone })
 }
 
-export async function reagir(sessao: string, messageId: string, emoji: string): Promise<{ messageId: string }> {
-  const corpo = { session: sessao, messageId, reaction: emoji }
-  // versões novas do WAHA usam POST; as antigas, PUT
-  await waha('POST', '/api/reaction', corpo).catch(() => waha('PUT', '/api/reaction', corpo))
-  return { messageId: `${messageId}:reacao` }
-}
-
-function idDaResposta(r: unknown): string {
-  const o = (r ?? {}) as { id?: string | { _serialized?: string; id?: string }; key?: { id?: string } }
-  if (typeof o.id === 'string') return idCurto(o.id)
-  if (o.id && typeof o.id === 'object') {
-    const bruto = o.id._serialized ?? o.id.id
-    if (bruto) return idCurto(bruto)
-  }
-  if (o.key?.id) return idCurto(o.key.id)
-  return `waha-${Date.now()}`
-}
-
-/**
- * Botões e listas não existem no WhatsApp comum de forma confiável.
- * Viram texto com as opções numeradas.
- */
-export function textoDeOpcoes(corpo: string, opcoes: string[], rodape?: string): string {
-  const linhas = [corpo.trim(), '', ...opcoes.map((o, i) => `${i + 1}. ${o}`)]
-  if (rodape?.trim()) linhas.push('', rodape.trim())
-  return linhas.join('\n')
+export async function reagir(
+  sessao: string,
+  messageId: string,
+  emoji: string,
+  telefone?: string
+): Promise<{ messageId: string }> {
+  await pedirSemEsperar(sessao, 'reacao', { messageId, emoji, ...(telefone ? { telefone } : {}) })
+  return { messageId: `${idCurto(messageId)}:reacao` }
 }
 
 /* ------------------------------------------------------------ sessão */
 
 export interface StatusSessao {
-  status: 'STOPPED' | 'STARTING' | 'SCAN_QR_CODE' | 'WORKING' | 'FAILED' | string
-  me?: { id?: string; pushName?: string } | null
+  status: 'STOPPED' | 'STARTING' | 'SCAN_QR_CODE' | 'WORKING' | 'FAILED' | 'PONTE_OFFLINE' | string
+  qr?: string | null
+  numero?: string | null
+  nome?: string | null
 }
 
 export async function statusDaSessao(sessao: string): Promise<StatusSessao | null> {
-  try {
-    return await waha<StatusSessao>('GET', `/api/sessions/${encodeURIComponent(sessao)}`)
-  } catch (e) {
-    if (e instanceof WahaError && e.status === 404) return null
-    throw e
+  const { data } = await supabaseAdmin()
+    .from('whatsapp_sessoes')
+    .select('status, qr, numero, nome, pedido')
+    .eq('sessao', sessao)
+    .maybeSingle()
+  if (!data) return null
+  return {
+    status: data.status as string,
+    qr: (data.qr as string | null) ?? null,
+    numero: (data.numero as string | null) ?? null,
+    nome: (data.nome as string | null) ?? null,
   }
 }
 
-/** Cria (ou reinicia) a sessão já com o webhook apontando para o CRM. */
-export async function iniciarSessao(sessao: string, webhookUrl: string, segredo: string): Promise<void> {
-  const webhook = {
-    url: webhookUrl,
-    events: ['message', 'message.ack', 'message.reaction', 'session.status'],
-    customHeaders: [{ name: 'x-crm-segredo', value: segredo }],
-  }
-  const existente = await statusDaSessao(sessao)
-  if (!existente) {
-    await waha('POST', '/api/sessions', { name: sessao, start: true, config: { webhooks: [webhook] } })
-    return
-  }
-  await waha('PUT', `/api/sessions/${encodeURIComponent(sessao)}`, { name: sessao, config: { webhooks: [webhook] } })
-  if (existente.status === 'STOPPED' || existente.status === 'FAILED') {
-    await waha('POST', `/api/sessions/${encodeURIComponent(sessao)}/start`)
-  }
-}
-
-export async function qrDaSessao(sessao: string): Promise<string> {
-  const png = await waha<ArrayBuffer>('GET', `/api/${encodeURIComponent(sessao)}/auth/qr?format=image`, undefined, 'image/png')
-  return `data:image/png;base64,${Buffer.from(png).toString('base64')}`
+/** Pede à ponte para ligar a sessão da conta (mostra QR se ainda não pareou). */
+export async function iniciarSessao(sessao: string, accountId: string): Promise<void> {
+  const { error } = await supabaseAdmin()
+    .from('whatsapp_sessoes')
+    .upsert(
+      { sessao, account_id: accountId, pedido: 'conectar', atualizado_em: new Date().toISOString() },
+      { onConflict: 'sessao' }
+    )
+  if (error) throw new WahaError(`Não foi possível pedir a conexão: ${error.message}`)
 }
 
 export async function desconectarSessao(sessao: string): Promise<void> {
-  await waha('POST', `/api/sessions/${encodeURIComponent(sessao)}/logout`).catch(() => {})
-  await waha('POST', `/api/sessions/${encodeURIComponent(sessao)}/stop`).catch(() => {})
+  await supabaseAdmin()
+    .from('whatsapp_sessoes')
+    .update({ pedido: 'desconectar', atualizado_em: new Date().toISOString() })
+    .eq('sessao', sessao)
 }
