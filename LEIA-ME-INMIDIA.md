@@ -23,7 +23,7 @@ original + `043_inmidia_fecha_funcoes.sql` já estão aplicadas.
 | Números e gráficos | **Painel**: conversas por dia, tempo de resposta, valor do funil |
 | Funil em colunas | **Funis**: cada etapa é uma coluna, arrasta o card |
 | Contatos | **Contatos**: etiquetas, campos próprios, importar CSV |
-| WhatsApp | **Caixa de entrada** (API oficial da Meta; ver abaixo) |
+| WhatsApp | **Caixa de entrada**. Número conectado por QR code em Configurações > WhatsApp, pela ponte (`../crm-whatsapp`) |
 | Disparos | **Disparos**: só com modelo aprovado pela Meta |
 | Automações | **Automações** e **Fluxos**: gatilho por mensagem, contato novo, palavra |
 | IA | **Configurações > IA**: chave da Anthropic, respostas sugeridas e base de conhecimento |
@@ -46,7 +46,9 @@ Todas já estão na Vercel, menos `SUPABASE_SERVICE_ROLE_KEY`, que o Matheus col
 | `NEXT_PUBLIC_APP_LOCALE` | `pt` |
 | `NEXT_PUBLIC_BASE_PATH` | `/crm` |
 | `NEXT_PUBLIC_SITE_URL` | `https://www.inmidia.space/crm` |
-| `META_APP_SECRET` | só quando ligar o WhatsApp oficial |
+| `META_APP_SECRET` | segredo aleatório: assina o repasse das mensagens da ponte |
+| `WAHA_WEBHOOK_SECRET` | senha da ponte do WhatsApp (igual ao `PONTE_SEGREDO` do `.env` da ponte) |
+| `NEXT_PUBLIC_WHATSAPP_PROVIDER` | `waha`: WhatsApp por QR code em vez da API oficial |
 
 ## Banco
 
@@ -91,3 +93,18 @@ guarda o resto numa nota e abre card na etapa "Novo lead" do funil.
 O envio ao CRM não espera resposta: o formulário segue igual (banco da
 Lovable, CAPI, página de obrigado, WhatsApp). Formulários sem telefone
 (Mercato, quizzes do Low Ticket) não entram: o CRM exige telefone.
+
+## WhatsApp por QR code (sem API oficial)
+
+O número é conectado por QR code e as mensagens passam pela **ponte**, um
+programa em `Empresas/In Mídia/crm-whatsapp` que roda num computador sempre
+ligado (hoje o Mac do Matheus). A ponte só faz conexões de saída:
+
+- pergunta o que fazer em `/api/whatsapp/ponte/pendencias` (segura até 20 s);
+- conta o estado em `/ponte/estado` e o resultado dos envios em `/ponte/resultado`;
+- entrega o que chegou em `/api/whatsapp/waha/webhook` (traduzido para o
+  formato da Meta e repassado para `/api/whatsapp/webhook`).
+
+O CRM deixa os envios na tabela `whatsapp_saida` e espera a ponte responder
+(até 25 s). Com a ponte desligada, enviar dá erro claro em vez de sumir.
+Tabelas: `whatsapp_sessoes`, `whatsapp_saida`, `whatsapp_ponte` (migration 047).
