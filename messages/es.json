@@ -12,7 +12,8 @@
     "signingIn": "Iniciando sesión...",
     "signIn": "Iniciar sesión",
     "noAccount": "¿No tienes una cuenta?",
-    "createAccount": "Crear cuenta"
+    "createAccount": "Crear cuenta",
+    "linkError": "We couldn't confirm with that link: it expires once used. If you already clicked it, your email is confirmed. Just sign in below."
   },
   "Sidebar": {
     "title": "Plantilla de CRM para WhatsApp",
@@ -1905,7 +1906,18 @@
     "creating": "Creando cuenta...",
     "submit": "Crear cuenta",
     "haveAccount": "¿Ya tienes una cuenta?",
-    "signIn": "Iniciar sesión"
+    "signIn": "Iniciar sesión",
+    "whatArrives": "The email you'll receive",
+    "fromLabel": "From:",
+    "fromValue": "CRM In Mídia (crm@inmidia.space)",
+    "subjectLabel": "Subject:",
+    "subjectValue": "Confirm your CRM In Mídia sign-up",
+    "insideLabel": "Inside:",
+    "insideValue": "a green “Confirm my email” button",
+    "step1": "Open your email.",
+    "step2": "Click the green “Confirm my email” button.",
+    "step3": "Done: you land in the CRM, already signed in.",
+    "spamHint": "Nothing after 2 minutes? Check Spam or Promotions."
   },
   "ForgotPasswordPage": {
     "checkEmailTitle": "Revisa tu correo",
@@ -2026,5 +2038,18 @@
   },
   "DashboardShell": {
     "loading": "Cargando..."
+  },
+  "ResetPasswordPage": {
+    "title": "Create a new password",
+    "desc": "Choose the new password for your account.",
+    "passwordLabel": "New password",
+    "passwordPlaceholder": "At least 6 characters",
+    "confirmLabel": "Repeat the new password",
+    "submit": "Save new password",
+    "saving": "Saving...",
+    "tooShort": "The password must have at least 6 characters.",
+    "mismatch": "The passwords don't match.",
+    "expired": "The recovery link has expired.",
+    "askAgain": "Request another link"
   }
 }

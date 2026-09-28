@@ -68,9 +68,11 @@ function SignupPageInner() {
     // email back at the join page so the user can accept after
     // verifying. Without a token, Supabase uses its default
     // redirect (the app root).
-    const emailRedirectTo = inviteToken
-      ? `${window.location.origin}${withBase(`/join/${encodeURIComponent(inviteToken)}`)}`
-      : undefined;
+    // In Mídia: o link volta sempre por /auth/confirm, que deixa a
+    // pessoa logada e leva ao painel (ou ao convite, se veio de um).
+    const depois = inviteToken ? `/join/${encodeURIComponent(inviteToken)}` : "/dashboard";
+    const emailRedirectTo =
+      `${window.location.origin}${withBase("/auth/confirm")}?next=${encodeURIComponent(depois)}`;
 
     const { error } = await supabase.auth.signUp({
       email,
@@ -113,7 +115,26 @@ function SignupPageInner() {
               })}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {/* In Mídia: o que vai chegar e o que fazer com ele */}
+            <div className="space-y-2 rounded-lg border border-border bg-muted/40 p-4 text-sm">
+              <p className="font-medium text-foreground">{t("whatArrives")}</p>
+              <p className="text-muted-foreground">
+                <span className="text-foreground">{t("fromLabel")}</span> {t("fromValue")}
+              </p>
+              <p className="text-muted-foreground">
+                <span className="text-foreground">{t("subjectLabel")}</span> {t("subjectValue")}
+              </p>
+              <p className="text-muted-foreground">
+                <span className="text-foreground">{t("insideLabel")}</span> {t("insideValue")}
+              </p>
+            </div>
+            <ol className="list-decimal space-y-1 pl-5 text-sm text-muted-foreground">
+              <li>{t("step1")}</li>
+              <li>{t("step2")}</li>
+              <li>{t("step3")}</li>
+            </ol>
+            <p className="text-xs text-muted-foreground">{t("spamHint")}</p>
             <Link
               href={
                 inviteToken

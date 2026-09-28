@@ -38,6 +38,8 @@ function LoginPageInner() {
   // account. After a successful sign-in we send them to the join
   // page to accept rather than to /dashboard.
   const inviteToken = searchParams.get("invite");
+  // In Mídia: /auth/confirm manda ?erro=link quando o link do e-mail falha
+  const linkFalhou = searchParams.get("erro") === "link";
   const t = useTranslations("LoginPage");
 
   const [email, setEmail] = useState("");
@@ -98,6 +100,11 @@ function LoginPageInner() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
+            {linkFalhou && !error && (
+              <div className="rounded-lg border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-foreground">
+                {t("linkError")}
+              </div>
+            )}
             {error && (
               <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-400">
                 {error}

@@ -5,14 +5,15 @@
     "descAccept": "Entre e levaremos você até o convite.",
     "descWelcome": "Entre na sua conta",
     "emailLabel": "E-mail",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "voce@empresa.com.br",
     "passwordLabel": "Senha",
     "forgotPassword": "Esqueceu a senha?",
     "passwordPlaceholder": "Digite sua senha",
     "signingIn": "Entrando...",
     "signIn": "Entrar",
     "noAccount": "Não tem uma conta?",
-    "createAccount": "Criar conta"
+    "createAccount": "Criar conta",
+    "linkError": "Não deu para confirmar pelo link: ele expira depois de usado. Se você já clicou nele antes, seu e-mail já está confirmado. É só entrar abaixo com seu e-mail e senha."
   },
   "Sidebar": {
     "title": "CRM In Mídia",
@@ -1887,8 +1888,8 @@
   "SignupPage": {
     "passwordsMismatch": "As senhas não coincidem",
     "passwordTooShort": "A senha deve ter pelo menos 6 caracteres",
-    "checkEmailTitle": "Verifique seu e-mail",
-    "checkEmailDesc": "Enviamos um link de confirmação para <strong>{email}</strong>. Verifique sua caixa de entrada e clique no link para confirmar sua conta.",
+    "checkEmailTitle": "Falta só um passo: confirmar seu e-mail",
+    "checkEmailDesc": "Acabamos de mandar um e-mail para <strong>{email}</strong>. Sua conta só fica ativa depois que você clicar no botão dele.",
     "backToSignIn": "Voltar ao login",
     "titleJoin": "Criar conta e entrar na equipe",
     "title": "Criar conta",
@@ -1897,7 +1898,7 @@
     "fullNameLabel": "Nome completo",
     "fullNamePlaceholder": "João Silva",
     "emailLabel": "E-mail",
-    "emailPlaceholder": "you@example.com",
+    "emailPlaceholder": "voce@empresa.com.br",
     "passwordLabel": "Senha",
     "passwordPlaceholder": "Pelo menos 6 caracteres",
     "confirmPasswordLabel": "Confirmar senha",
@@ -1905,7 +1906,18 @@
     "creating": "Criando conta...",
     "submit": "Criar conta",
     "haveAccount": "Já tem uma conta?",
-    "signIn": "Entrar"
+    "signIn": "Entrar",
+    "whatArrives": "O e-mail que vai chegar",
+    "fromLabel": "De:",
+    "fromValue": "CRM In Mídia (crm@inmidia.space)",
+    "subjectLabel": "Assunto:",
+    "subjectValue": "Confirme seu cadastro no CRM In Mídia",
+    "insideLabel": "Dentro:",
+    "insideValue": "um botão verde escrito “Confirmar meu e-mail”",
+    "step1": "Abra seu e-mail, no celular ou no computador.",
+    "step2": "Clique no botão verde “Confirmar meu e-mail”. Só isso, não precisa responder nada.",
+    "step3": "Pronto: você entra direto no CRM, já logado.",
+    "spamHint": "Não chegou em 2 minutos? Procure na caixa de Spam ou na aba Promoções."
   },
   "ForgotPasswordPage": {
     "checkEmailTitle": "Verifique seu e-mail",
@@ -2026,5 +2038,18 @@
   },
   "DashboardShell": {
     "loading": "Carregando..."
+  },
+  "ResetPasswordPage": {
+    "title": "Criar nova senha",
+    "desc": "Escolha a nova senha da sua conta no CRM In Mídia.",
+    "passwordLabel": "Nova senha",
+    "passwordPlaceholder": "Pelo menos 6 caracteres",
+    "confirmLabel": "Repita a nova senha",
+    "submit": "Salvar nova senha",
+    "saving": "Salvando...",
+    "tooShort": "A senha precisa ter pelo menos 6 caracteres.",
+    "mismatch": "As duas senhas não são iguais.",
+    "expired": "O link de recuperação expirou.",
+    "askAgain": "Pedir outro link"
   }
 }
