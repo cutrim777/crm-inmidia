@@ -148,8 +148,10 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value:
-              "public, max-age=0, s-maxage=300, stale-while-revalidate=86400",
+            // In Mídia: o CRM passa pela CDN do site (rewrite de /crm).
+            // Página guardada em cache lá pula o middleware de login e
+            // serve HTML velho depois de cada deploy. Página não guarda.
+            value: "private, no-cache, no-store, max-age=0, must-revalidate",
           },
         ],
       },
