@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { gravacaoBloqueada, MENSAGEM_BETA } from '@/lib/beta'
 
 export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -24,6 +25,11 @@ export async function middleware(request: NextRequest) {
   )
 
   const { data: { user } } = await supabase.auth.getUser()
+
+  // In Mídia: módulos em beta são só para olhar; nenhuma gravação passa
+  if (gravacaoBloqueada(request.method, request.nextUrl.pathname)) {
+    return NextResponse.json({ error: MENSAGEM_BETA }, { status: 423 })
+  }
 
   // getUser() transparently refreshes an expired access token, which
   // ROTATES the refresh token and writes the new cookies onto

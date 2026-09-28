@@ -234,6 +234,8 @@ export function MessageThread({
 
   // 24-hour session timer
   const sessionInfo = useMemo(() => {
+    // In Mídia: WhatsApp por QR code (WAHA) não tem janela de 24 horas
+    if (process.env.NEXT_PUBLIC_WHATSAPP_PROVIDER === "waha") return { expired: false, remaining: "WhatsApp por QR" };
     if (!messages.length) return { expired: false, remaining: "" };
 
     // Find last customer message

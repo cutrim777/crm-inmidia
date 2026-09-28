@@ -9,6 +9,16 @@
  * instead of a runtime rejection from Meta.
  */
 
+import {
+  ehWaha,
+  sessaoDe,
+  enviarTexto,
+  enviarMidia,
+  reagir,
+  marcarLida,
+  digitando,
+  textoDeOpcoes,
+} from './waha'
 import { isBusinessScopedUserId } from './wa-identity'
 
 const META_API_VERSION = 'v21.0'
@@ -357,6 +367,10 @@ export interface SendTextMessageArgs {
 export async function sendTextMessage(
   args: SendTextMessageArgs
 ): Promise<MetaSendResult> {
+  // In Mídia: número conectado por QR code (WAHA), sem API oficial
+  if (ehWaha(args.phoneNumberId)) {
+    return enviarTexto(sessaoDe(args.phoneNumberId), args.to, args.text, args.contextMessageId)
+  }
   const { phoneNumberId, accessToken, to, text, contextMessageId } = args
   const url = `${META_API_BASE}/${phoneNumberId}/messages`
   const body: Record<string, unknown> = {
@@ -414,6 +428,11 @@ export interface SendMediaMessageArgs {
 export async function sendMediaMessage(
   args: SendMediaMessageArgs,
 ): Promise<MetaSendResult> {
+  if (ehWaha(args.phoneNumberId)) {
+    if (!args.link) throw new Error('sendMediaMessage requires a link.')
+    return enviarMidia(sessaoDe(args.phoneNumberId), args.to, args.kind,
+      { url: args.link, filename: args.filename }, args.kind === 'audio' ? undefined : args.caption)
+  }
   const { phoneNumberId, accessToken, to, kind, link, caption, filename, contextMessageId } = args
   if (!link) throw new Error('sendMediaMessage requires a link.')
   const url = `${META_API_BASE}/${phoneNumberId}/messages`
@@ -499,6 +518,10 @@ export interface SendTemplateMessageArgs {
 export async function sendTemplateMessage(
   args: SendTemplateMessageArgs
 ): Promise<MetaSendResult> {
+  if (ehWaha(args.phoneNumberId)) {
+    // sem Meta não há modelo aprovado: o modelo vira texto normal
+    return enviarTexto(sessaoDe(args.phoneNumberId), args.to, textoDoModelo(args), args.contextMessageId)
+  }
   const {
     phoneNumberId,
     accessToken,
@@ -802,6 +825,9 @@ export interface SendReactionMessageArgs {
 export async function sendReactionMessage(
   args: SendReactionMessageArgs
 ): Promise<MetaSendResult> {
+  if (ehWaha(args.phoneNumberId)) {
+    return reagir(sessaoDe(args.phoneNumberId), args.targetMessageId, args.emoji)
+  }
   const { phoneNumberId, accessToken, to, targetMessageId, emoji } = args
   const url = `${META_API_BASE}/${phoneNumberId}/messages`
   const response = await fetch(url, {
@@ -853,6 +879,14 @@ export interface SendTypingIndicatorArgs {
 export async function sendTypingIndicator(
   args: SendTypingIndicatorArgs
 ): Promise<void> {
+  if (ehWaha(args.phoneNumberId)) {
+    const chat = chatIdDoMessageId(args.messageId)
+    if (chat) {
+      await marcarLida(sessaoDe(args.phoneNumberId), chat)
+      await digitando(sessaoDe(args.phoneNumberId), chat)
+    }
+    return
+  }
   const { phoneNumberId, accessToken, messageId } = args
   const url = `${META_API_BASE}/${phoneNumberId}/messages`
   const response = await fetch(url, {
@@ -936,6 +970,11 @@ export interface SendInteractiveButtonsArgs {
 export async function sendInteractiveButtons(
   args: SendInteractiveButtonsArgs
 ): Promise<MetaSendResult> {
+  if (ehWaha(args.phoneNumberId)) {
+    const corpo = [args.headerText, args.bodyText].filter(Boolean).join('\n\n')
+    return enviarTexto(sessaoDe(args.phoneNumberId), args.to,
+      textoDeOpcoes(corpo, args.buttons.map((b) => b.title), args.footerText), args.contextMessageId)
+  }
   const {
     phoneNumberId, accessToken, to,
     bodyText, headerText, footerText, buttons, contextMessageId,
@@ -1043,6 +1082,12 @@ export interface SendInteractiveListArgs {
 export async function sendInteractiveList(
   args: SendInteractiveListArgs
 ): Promise<MetaSendResult> {
+  if (ehWaha(args.phoneNumberId)) {
+    const corpo = [args.headerText, args.bodyText].filter(Boolean).join('\n\n')
+    const opcoes = args.sections.flatMap((sec) => sec.rows.map((r) => (r.description ? `${r.title} (${r.description})` : r.title)))
+    return enviarTexto(sessaoDe(args.phoneNumberId), args.to,
+      textoDeOpcoes(corpo, opcoes, args.footerText), args.contextMessageId)
+  }
   const {
     phoneNumberId, accessToken, to,
     bodyText, buttonLabel, headerText, footerText, sections, contextMessageId,
@@ -1222,4 +1267,31 @@ export async function downloadMedia(
     response.headers.get('content-type') || 'application/octet-stream'
   const buffer = Buffer.from(await response.arrayBuffer())
   return { buffer, contentType }
+}
+
+/* In Mídia: auxiliares do WhatsApp por QR code (WAHA) */
+
+/** "false_5562999990000@c.us_ABC" -> "5562999990000@c.us" */
+export function chatIdDoMessageId(messageId: string): string | null {
+  const m = /^(?:true|false)_([^_]+@(?:c\.us|lid|s\.whatsapp\.net))_/.exec(messageId)
+  return m ? m[1] : null
+}
+
+/** Modelo da Meta renderizado como texto: {{1}}, {{2}} preenchidos. */
+export function textoDoModelo(args: SendTemplateMessageArgs): string {
+  const valores = args.messageParams?.body ?? args.params ?? []
+  const preenche = (t: string) => t.replace(/\{\{\s*(\d+)\s*\}\}/g, (_, n) => valores[Number(n) - 1] ?? '')
+  const tpl = args.template as unknown as {
+    body_text?: string; header_type?: string | null; header_content?: string | null; footer_text?: string | null
+  } | undefined
+  if (!tpl?.body_text) {
+    throw new Error('Esse envio usa um modelo da Meta sem texto salvo no CRM. No WhatsApp por QR code, mande uma mensagem normal.')
+  }
+  const partes: string[] = []
+  if (tpl.header_type === 'text' && tpl.header_content) {
+    partes.push(`*${(args.messageParams?.headerText ? tpl.header_content.replace(/\{\{\s*1\s*\}\}/, args.messageParams.headerText) : tpl.header_content).trim()}*`)
+  }
+  partes.push(preenche(tpl.body_text).trim())
+  if (tpl.footer_text) partes.push(`_${tpl.footer_text.trim()}_`)
+  return partes.join('\n\n')
 }
