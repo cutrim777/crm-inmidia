@@ -44,12 +44,21 @@ export async function waha<T = unknown>(
   aceitar = 'application/json'
 ): Promise<T> {
   const { url, key } = config()
-  const r = await fetch(`${url}${caminho}`, {
-    method: metodo,
-    headers: { 'X-Api-Key': key, 'Content-Type': 'application/json', Accept: aceitar },
-    body: corpo === undefined ? undefined : JSON.stringify(corpo),
-    cache: 'no-store',
-  })
+  let r: Response
+  try {
+    r = await fetch(`${url}${caminho}`, {
+      method: metodo,
+      headers: { 'X-Api-Key': key, 'Content-Type': 'application/json', Accept: aceitar },
+      body: corpo === undefined ? undefined : JSON.stringify(corpo),
+      cache: 'no-store',
+      signal: AbortSignal.timeout(15000),
+    })
+  } catch {
+    throw new WahaError(
+      'O servidor do WhatsApp não respondeu. Se ele ainda não foi instalado, é isso: falta subir o servidor (whats.inmidia.space).',
+      503
+    )
+  }
   if (!r.ok) {
     const txt = await r.text().catch(() => '')
     throw new WahaError(`WAHA ${metodo} ${caminho} ${r.status}: ${txt.slice(0, 300)}`, r.status)
