@@ -38,7 +38,7 @@ export async function GET() {
     if (error) {
       console.error('[ai/config GET] fetch error:', error)
       return NextResponse.json(
-        { error: 'Failed to load AI configuration' },
+        { error: 'Não foi possível carregar a configuração de IA' },
         { status: 500 },
       )
     }
@@ -223,7 +223,7 @@ export async function POST(request: Request) {
       if (upErr) {
         console.error('[ai/config POST] update error:', upErr)
         return NextResponse.json(
-          { error: 'Failed to save AI configuration' },
+          { error: 'Não foi possível salvar a configuração de IA' },
           { status: 500 },
         )
       }
@@ -237,7 +237,7 @@ export async function POST(request: Request) {
       if (insErr) {
         console.error('[ai/config POST] insert error:', insErr)
         return NextResponse.json(
-          { error: 'Failed to save AI configuration' },
+          { error: 'Não foi possível salvar a configuração de IA' },
           { status: 500 },
         )
       }
@@ -265,7 +265,7 @@ export async function DELETE() {
     if (error) {
       console.error('[ai/config DELETE] error:', error)
       return NextResponse.json(
-        { error: 'Failed to delete AI configuration' },
+        { error: 'Não foi possível apagar a configuração de IA' },
         { status: 500 },
       )
     }

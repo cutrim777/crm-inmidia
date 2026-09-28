@@ -15,6 +15,7 @@ import {
 import { buildMetaTemplatePayload } from '@/lib/whatsapp/template-components'
 import { ensureMediaHeaderHandle } from '@/lib/whatsapp/template-header-handle'
 import { normalizeStatus } from '@/lib/whatsapp/template-status-normalize'
+import { ehWaha } from '@/lib/whatsapp/waha'
 
 /**
  * Shared upsert payload builder — both the Meta-failure path and the
@@ -105,7 +106,7 @@ export async function POST(request: Request) {
     try {
       payload = (await request.json()) as TemplatePayload
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
+      return NextResponse.json({ error: 'Envio inválido.' }, { status: 400 })
     }
 
     if (payload.category === 'Authentication') {
@@ -152,6 +153,12 @@ export async function POST(request: Request) {
           { status: 400 },
         )
       }
+      if (ehWaha(config.phone_number_id)) {
+        // In Mídia: WhatsApp por QR code não tem aprovação da Meta. O
+        // modelo é só um texto pronto, então já nasce aprovado.
+        metaTemplateId = `waha-${crypto.randomUUID()}`
+        metaStatus = 'APPROVED'
+      } else {
       if (!config.waba_id) {
         return NextResponse.json(
           {
@@ -208,6 +215,7 @@ export async function POST(request: Request) {
           },
           { status: isRateLimit ? 429 : 502 },
         )
+      }
       }
     }
 

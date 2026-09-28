@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { paraFormatoMeta, remetenteComTelefone, textoDaMensagem } from './waha-convert'
 import { chatIdDoMessageId, textoDoModelo } from './meta-api'
-import { textoDeOpcoes, chatIdDe, telefoneDe, sessaoDaConta } from './waha'
+import { textoDeOpcoes, chatIdDe, telefoneDe, sessaoDaConta, idCurto } from './waha'
 
 const valor = (b: unknown) =>
   (b as { entry: Array<{ changes: Array<{ value: Record<string, unknown> }> }> }).entry[0].changes[0].value
@@ -45,7 +45,7 @@ describe('paraFormatoMeta: mensagem recebida', () => {
   })
 
   it('mídia vira descrição em português', () => {
-    expect(textoDaMensagem({ hasMedia: true, media: { mimetype: 'image/jpeg' }, body: '' })).toBe('[📷 Imagem recebido: abra no celular]')
+    expect(textoDaMensagem({ hasMedia: true, media: { mimetype: 'image/jpeg' }, body: '' })).toBe('[📷 Imagem recebida: abra no celular]')
     expect(textoDaMensagem({ hasMedia: true, media: { mimetype: 'audio/ogg' }, body: '' })).toBe('[🎤 Áudio recebido: abra no celular]')
     expect(textoDaMensagem({ hasMedia: true, media: { mimetype: 'image/png' }, body: 'olha' })).toBe('[📷 Imagem] olha')
   })
@@ -54,14 +54,36 @@ describe('paraFormatoMeta: mensagem recebida', () => {
 describe('paraFormatoMeta: confirmação de entrega', () => {
   it('ack 3 vira "read" com o mesmo id do envio', () => {
     const v = valor(paraFormatoMeta({ event: 'message.ack', session: 's', payload: { id: 'true_5562@c.us_X', fromMe: true, ack: 3, to: '5562999990000@c.us' } }))
-    expect(v.statuses).toMatchObject([{ id: 'true_5562@c.us_X', status: 'read', recipient_id: '5562999990000' }])
+    expect(v.statuses).toMatchObject([{ id: 'X', status: 'read', recipient_id: '5562999990000' }])
   })
   it('evento desconhecido é ignorado', () => {
     expect(paraFormatoMeta({ event: 'presence.update', session: 's', payload: {} })).toBeNull()
   })
 })
 
+describe('paraFormatoMeta: reação do cliente', () => {
+  it('vira mensagem do tipo reaction apontando para o id curto', () => {
+    const v = valor(paraFormatoMeta({
+      event: 'message.reaction',
+      session: 's',
+      payload: {
+        id: 'false_5562999990000@c.us_R1', from: '5562999990000@c.us', fromMe: false, timestamp: 1790000000,
+        reaction: { text: '👍', messageId: 'true_5562999990000@c.us_3EB0ABC' },
+      },
+    }))
+    expect(v.messages).toMatchObject([{ type: 'reaction', reaction: { message_id: '3EB0ABC', emoji: '👍' } }])
+  })
+  it('reação minha é ignorada', () => {
+    expect(paraFormatoMeta({ event: 'message.reaction', session: 's', payload: { fromMe: true, from: 'x@c.us', reaction: { messageId: 'a_b_c' } } })).toBeNull()
+  })
+})
+
 describe('auxiliares', () => {
+  it('id curto casa envio com confirmação', () => {
+    expect(idCurto('true_5562999990000@c.us_3EB0ABC')).toBe('3EB0ABC')
+    expect(idCurto('3EB0ABC')).toBe('3EB0ABC')
+  })
+
   it('ids e telefones', () => {
     expect(chatIdDe('+55 62 99999-0000')).toBe('5562999990000@c.us')
     expect(telefoneDe('5562999990000@c.us')).toBe('5562999990000')

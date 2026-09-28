@@ -27,7 +27,7 @@ export async function GET(request: Request) {
     suppliedBuf.length !== expectedBuf.length ||
     !timingSafeEqual(suppliedBuf, expectedBuf)
   ) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
   }
 
   const admin = supabaseAdmin()

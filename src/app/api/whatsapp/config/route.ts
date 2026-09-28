@@ -21,6 +21,7 @@ import {
   phoneNumberBelongsToWaba,
 } from '@/lib/whatsapp/waba-pairing'
 import { encrypt, decrypt } from '@/lib/whatsapp/encryption'
+import { ehWaha } from '@/lib/whatsapp/waha'
 
 /**
  * Resolve the caller's account_id from their profile. Inlined here
@@ -105,7 +106,7 @@ export async function GET() {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
     }
 
     const accountId = await resolveAccountId(supabase, user.id)
@@ -114,7 +115,7 @@ export async function GET() {
         {
           connected: false,
           reason: 'no_account',
-          message: 'Your profile is not linked to an account.',
+          message: 'Seu usuário não está ligado a uma conta.',
         },
         { status: 200 },
       )
@@ -129,7 +130,7 @@ export async function GET() {
     if (configError) {
       console.error('Error fetching whatsapp_config:', configError)
       return NextResponse.json(
-        { connected: false, reason: 'db_error', message: 'Failed to fetch configuration' },
+        { connected: false, reason: 'db_error', message: 'Não foi possível buscar a configuração' },
         { status: 200 }
       )
     }
@@ -139,7 +140,7 @@ export async function GET() {
         {
           connected: false,
           reason: 'no_config',
-          message: 'No WhatsApp configuration saved yet. Fill in the form and click Save Configuration.',
+          message: 'Nenhum WhatsApp conectado ainda.',
         },
         { status: 200 }
       )
@@ -147,6 +148,19 @@ export async function GET() {
 
     // Try to decrypt the stored token with the current ENCRYPTION_KEY.
     // If this fails, the key changed (or was never consistent across envs).
+    // In Mídia: WhatsApp por QR code (WAHA) não passa pela Meta; a
+    // situação vem do status gravado pelo webhook e pelo botão de conectar
+    if (ehWaha(config.phone_number_id)) {
+      const conectado = config.status === 'connected'
+      return NextResponse.json({
+        connected: conectado,
+        provider: 'waha',
+        ...(conectado
+          ? {}
+          : { reason: 'waha_disconnected', message: 'WhatsApp por QR code desconectado. Conecte de novo em Configurações > WhatsApp.' }),
+      })
+    }
+
     let accessToken: string
     try {
       accessToken = decrypt(config.access_token)
@@ -227,7 +241,7 @@ export async function GET() {
   } catch (error) {
     console.error('Error in WhatsApp config GET:', error)
     return NextResponse.json(
-      { connected: false, reason: 'unknown', message: 'Internal server error' },
+      { connected: false, reason: 'unknown', message: 'Erro interno do servidor' },
       { status: 500 }
     )
   }
@@ -254,13 +268,13 @@ export async function POST(request: Request) {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
     }
 
     const accountId = await resolveAccountId(supabase, user.id)
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Seu usuário não está ligado a uma conta.' },
         { status: 403 },
       )
     }
@@ -304,7 +318,7 @@ export async function POST(request: Request) {
     if (pin !== undefined && pin !== null && pin !== '') {
       if (typeof pin !== 'string' || !/^\d{6}$/.test(pin)) {
         return NextResponse.json(
-          { error: 'PIN must be exactly 6 digits.' },
+          { error: 'O PIN precisa ter exatamente 6 dígitos.' },
           { status: 400 }
         )
       }
@@ -327,7 +341,7 @@ export async function POST(request: Request) {
     if (claimedError) {
       console.error('Error checking phone_number_id ownership:', claimedError)
       return NextResponse.json(
-        { error: 'Failed to validate configuration' },
+        { error: 'Não foi possível validar a configuração' },
         { status: 500 }
       )
     }
@@ -515,7 +529,7 @@ export async function POST(request: Request) {
       if (updateError) {
         console.error('Error updating whatsapp_config:', updateError)
         return NextResponse.json(
-          { error: 'Failed to update configuration' },
+          { error: 'Não foi possível atualizar a configuração' },
           { status: 500 }
         )
       }
@@ -535,7 +549,7 @@ export async function POST(request: Request) {
       if (insertError) {
         console.error('Error inserting whatsapp_config:', insertError)
         return NextResponse.json(
-          { error: 'Failed to save configuration' },
+          { error: 'Não foi possível salvar a configuração' },
           { status: 500 }
         )
       }
@@ -569,7 +583,7 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error('Error in WhatsApp config POST:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }
 
@@ -590,13 +604,13 @@ export async function DELETE() {
     } = await supabase.auth.getUser()
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
     }
 
     const accountId = await resolveAccountId(supabase, user.id)
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Seu usuário não está ligado a uma conta.' },
         { status: 403 },
       )
     }
@@ -609,7 +623,7 @@ export async function DELETE() {
     if (deleteError) {
       console.error('Error deleting whatsapp_config:', deleteError)
       return NextResponse.json(
-        { error: 'Failed to delete configuration' },
+        { error: 'Não foi possível apagar a configuração' },
         { status: 500 }
       )
     }
@@ -617,6 +631,6 @@ export async function DELETE() {
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error in WhatsApp config DELETE:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    return NextResponse.json({ error: 'Erro interno do servidor' }, { status: 500 })
   }
 }

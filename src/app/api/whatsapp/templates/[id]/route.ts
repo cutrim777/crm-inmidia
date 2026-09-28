@@ -52,7 +52,7 @@ export async function PATCH(
     const { id } = await context.params
     if (!UUID_RE.test(id)) {
       return NextResponse.json(
-        { error: 'Invalid template id.' },
+        { error: 'Modelo inválido.' },
         { status: 400 },
       )
     }
@@ -62,7 +62,7 @@ export async function PATCH(
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
     }
 
     // Resolve the caller's account_id so template + whatsapp_config
@@ -75,7 +75,7 @@ export async function PATCH(
     const accountId = profile?.account_id as string | undefined
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Seu usuário não está ligado a uma conta.' },
         { status: 403 },
       )
     }
@@ -84,7 +84,7 @@ export async function PATCH(
     try {
       payload = (await request.json()) as TemplatePayload
     } catch {
-      return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
+      return NextResponse.json({ error: 'Envio inválido.' }, { status: 400 })
     }
 
     // RLS handles ownership, but we need the existing row to read
@@ -96,7 +96,7 @@ export async function PATCH(
       .eq('account_id', accountId)
       .maybeSingle()
     if (lookupErr || !existing) {
-      return NextResponse.json({ error: 'Template not found.' }, { status: 404 })
+      return NextResponse.json({ error: 'Modelo não encontrado.' }, { status: 404 })
     }
 
     if (!existing.meta_template_id) {
@@ -137,7 +137,8 @@ export async function PATCH(
       )
     }
 
-    if (!isDryRun()) {
+    // In Mídia: modelo do WhatsApp por QR code ("waha-...") só existe no CRM
+    if (!isDryRun() && !existing.meta_template_id.startsWith('waha-')) {
       const { data: config, error: configError } = await supabase
         .from('whatsapp_config')
         .select('*')
@@ -145,7 +146,7 @@ export async function PATCH(
         .single()
       if (configError || !config) {
         return NextResponse.json(
-          { error: 'WhatsApp not configured.' },
+          { error: 'WhatsApp não conectado.' },
           { status: 400 },
         )
       }
@@ -239,7 +240,7 @@ export async function DELETE(
     const { id } = await context.params
     if (!UUID_RE.test(id)) {
       return NextResponse.json(
-        { error: 'Invalid template id.' },
+        { error: 'Modelo inválido.' },
         { status: 400 },
       )
     }
@@ -249,7 +250,7 @@ export async function DELETE(
       error: authError,
     } = await supabase.auth.getUser()
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
     }
 
     // Same account-scoping rationale as the PATCH handler above —
@@ -263,7 +264,7 @@ export async function DELETE(
     const accountId = profile?.account_id as string | undefined
     if (!accountId) {
       return NextResponse.json(
-        { error: 'Your profile is not linked to an account.' },
+        { error: 'Seu usuário não está ligado a uma conta.' },
         { status: 403 },
       )
     }
@@ -275,10 +276,10 @@ export async function DELETE(
       .eq('account_id', accountId)
       .maybeSingle()
     if (lookupErr || !existing) {
-      return NextResponse.json({ error: 'Template not found.' }, { status: 404 })
+      return NextResponse.json({ error: 'Modelo não encontrado.' }, { status: 404 })
     }
 
-    if (existing.meta_template_id && !isDryRun()) {
+    if (existing.meta_template_id && !existing.meta_template_id.startsWith('waha-') && !isDryRun()) {
       const { data: config, error: configError } = await supabase
         .from('whatsapp_config')
         .select('*')
@@ -286,7 +287,7 @@ export async function DELETE(
         .single()
       if (configError || !config || !config.waba_id) {
         return NextResponse.json(
-          { error: 'WhatsApp not configured — cannot delete on Meta.' },
+          { error: 'WhatsApp não conectado: não dá para apagar na Meta.' },
           { status: 400 },
         )
       }

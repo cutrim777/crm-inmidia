@@ -171,7 +171,7 @@ export async function POST(request: Request) {
         results.push({
           phone: recipient.phone,
           status: 'failed',
-          error: 'Invalid phone number format',
+          error: 'Telefone em formato inválido',
         })
         failedCount++
         continue

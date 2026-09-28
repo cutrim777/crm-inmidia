@@ -17,6 +17,7 @@ import {
   viewedConversationFromLocation,
   type NotificationLabels,
 } from "@/lib/notifications/browser-notify";
+import { withBase } from "@/lib/base-path";
 
 const serverSnapshot = () => false;
 
@@ -105,7 +106,7 @@ export function useBrowserNotifications(): void {
           // One alert per conversation: a second message from the same
           // customer replaces the first instead of stacking.
           tag: msg.conversation_id,
-          icon: "/icon",
+          icon: withBase("/icon.png"),
         });
         notification.onclick = () => {
           window.focus();

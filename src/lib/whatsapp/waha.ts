@@ -12,6 +12,7 @@
  * O servidor WAHA é um só para todas as contas (env WAHA_URL + WAHA_API_KEY);
  * cada conta tem a sua sessão (um número de WhatsApp por conta).
  */
+import { isDeliverableUrl } from '@/lib/webhooks/ssrf'
 
 export const WAHA_PREFIXO = 'waha:'
 
@@ -22,6 +23,17 @@ export const sessaoDe = (phoneNumberId: string): string => phoneNumberId.slice(W
 
 /** Nome da sessão de uma conta: estável e curto. */
 export const sessaoDaConta = (accountId: string): string => `crm-${accountId.replace(/-/g, '').slice(0, 12)}`
+
+/**
+ * Id curto da mensagem. O WAHA devolve ora o id completo
+ * ("true_5562...@c.us_3EB0ABC"), ora só o final ("3EB0ABC"), conforme o
+ * motor. O CRM guarda sempre o final nas mensagens enviadas, para a
+ * confirmação de entrega/leitura casar com o envio.
+ */
+export function idCurto(id: string): string {
+  const partes = id.split('_')
+  return partes.length >= 3 ? partes[partes.length - 1] : id
+}
 
 export class WahaError extends Error {
   constructor(message: string, public status?: number) {
@@ -128,6 +140,10 @@ export async function enviarMidia(
   arquivo: { url: string; mimetype?: string; filename?: string },
   legenda?: string
 ): Promise<{ messageId: string }> {
+  // o arquivo é baixado pelo servidor do WAHA: só endereço público https
+  if (!/^https:\/\//i.test(arquivo.url) || !(await isDeliverableUrl(arquivo.url))) {
+    throw new WahaError('O arquivo precisa estar num endereço público (https).', 400)
+  }
   const chatId = await chatIdVerificado(sessao, telefone)
   const rota = { image: '/api/sendImage', video: '/api/sendVideo', document: '/api/sendFile', audio: '/api/sendVoice' }[tipo]
   const r = await waha<Record<string, unknown>>('POST', rota, {
@@ -156,9 +172,12 @@ export async function reagir(sessao: string, messageId: string, emoji: string): 
 
 function idDaResposta(r: unknown): string {
   const o = (r ?? {}) as { id?: string | { _serialized?: string; id?: string }; key?: { id?: string } }
-  if (typeof o.id === 'string') return o.id
-  if (o.id && typeof o.id === 'object') return o.id._serialized ?? o.id.id ?? `waha-${Date.now()}`
-  if (o.key?.id) return o.key.id
+  if (typeof o.id === 'string') return idCurto(o.id)
+  if (o.id && typeof o.id === 'object') {
+    const bruto = o.id._serialized ?? o.id.id
+    if (bruto) return idCurto(bruto)
+  }
+  if (o.key?.id) return idCurto(o.key.id)
   return `waha-${Date.now()}`
 }
 
@@ -192,7 +211,7 @@ export async function statusDaSessao(sessao: string): Promise<StatusSessao | nul
 export async function iniciarSessao(sessao: string, webhookUrl: string, segredo: string): Promise<void> {
   const webhook = {
     url: webhookUrl,
-    events: ['message', 'message.ack', 'session.status'],
+    events: ['message', 'message.ack', 'message.reaction', 'session.status'],
     customHeaders: [{ name: 'x-crm-segredo', value: segredo }],
   }
   const existente = await statusDaSessao(sessao)

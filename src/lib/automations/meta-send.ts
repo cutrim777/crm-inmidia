@@ -175,6 +175,8 @@ async function sendViaMeta(input: SendInput): Promise<{ whatsapp_message_id: str
         templateName: input.templateName,
         language: input.language,
         params: input.params,
+        // In Mídia: sem a linha do modelo, o WhatsApp por QR não tem o texto para mandar
+        template: templateRow ?? undefined,
       })
       return r.messageId
     }

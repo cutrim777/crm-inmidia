@@ -39,7 +39,7 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser()
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
   }
 
   const body = (await request.json().catch(() => null)) as
@@ -60,7 +60,7 @@ export async function POST(
     .eq('id', id)
     .maybeSingle()
   if (!existing) {
-    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
   }
 
   const admin = supabaseAdmin()
@@ -79,7 +79,7 @@ export async function POST(
         .eq('flow_id', id),
     ])
     if (!flow) {
-      return NextResponse.json({ error: 'Not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Não encontrado' }, { status: 404 })
     }
     const issues = validateFlowForActivation(
       flow as {

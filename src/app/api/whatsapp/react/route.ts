@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       .maybeSingle();
 
     if (msgError || !targetMessage) {
-      return NextResponse.json({ error: 'Message not found' }, { status: 404 });
+      return NextResponse.json({ error: 'Mensagem não encontrada' }, { status: 404 });
     }
 
     if (!targetMessage.message_id) {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
 
     if (convError || !conversation) {
       return NextResponse.json(
-        { error: 'Conversation not found' },
+        { error: 'Conversa não encontrada' },
         { status: 404 },
       );
     }
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
     const sendTarget = resolveContactSendTarget(contact);
     if (!sendTarget) {
       return NextResponse.json(
-        { error: 'Contact has no phone number or WhatsApp user ID' },
+        { error: 'O contato não tem telefone nem WhatsApp' },
         { status: 400 },
       );
     }
@@ -100,7 +100,7 @@ export async function POST(request: Request) {
 
     if (configError || !config) {
       return NextResponse.json(
-        { error: 'WhatsApp not configured.' },
+        { error: 'WhatsApp não conectado.' },
         { status: 400 },
       );
     }

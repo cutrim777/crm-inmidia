@@ -8,6 +8,7 @@ import {
 import { decrypt } from '@/lib/whatsapp/encryption'
 import { normalizeStatus } from '@/lib/whatsapp/template-status-normalize'
 import type { TemplateButton, TemplateSampleValues } from '@/types'
+import { ehWaha } from '@/lib/whatsapp/waha'
 
 /**
  * Sync message templates from Meta → local message_templates table.
@@ -149,6 +150,19 @@ export async function POST() {
         },
         { status: 400 },
       )
+    }
+
+    // In Mídia: no WhatsApp por QR code os modelos só existem no CRM
+    if (ehWaha(config.phone_number_id)) {
+      return NextResponse.json({
+        success: true,
+        total: 0,
+        inserted: 0,
+        updated: 0,
+        errors: [],
+        truncated: false,
+        message: 'No WhatsApp por QR code os modelos ficam só no CRM: não há nada para sincronizar com a Meta.',
+      })
     }
 
     if (!config.waba_id) {

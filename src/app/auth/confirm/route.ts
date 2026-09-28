@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
   const code = params.get("code");
   const pedido = params.get("next") ?? "/dashboard";
   // só caminho interno: nada de mandar a pessoa para outro site
-  const next = pedido.startsWith("/") && !pedido.startsWith("//") ? pedido : "/dashboard";
+  const next = /^\/(?![/\\])[^\\\s]*$/.test(pedido) ? pedido : "/dashboard";
 
   const supabase = await createClient();
   let ok = false;

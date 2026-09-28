@@ -55,6 +55,7 @@ import {
 import { validateInteractivePayload } from "@/lib/whatsapp/interactive";
 import type { InteractiveMessagePayload, QuickReply } from "@/types";
 import { QuickReplyPicker } from "./quick-reply-picker";
+import { withBase } from "@/lib/base-path";
 
 /** Media content types an agent can send from the composer. */
 export type ComposerMediaKind = "image" | "video" | "document" | "audio";
@@ -129,7 +130,8 @@ function formatDuration(seconds: number): string {
 /** Worker that encodes mic input to Ogg/Opus entirely in the browser
  *  (vendored from opus-recorder into /public). Recording client-side in a
  *  Meta-accepted format means no server ffmpeg / transcode step. */
-const OPUS_ENCODER_PATH = "/opus/encoderWorker.min.js";
+// In Mídia: o worker está em /public, então precisa do /crm na frente
+const OPUS_ENCODER_PATH = withBase("/opus/encoderWorker.min.js");
 
 export function MessageComposer({
   conversationId,

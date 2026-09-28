@@ -90,6 +90,39 @@ export function matchReplyId(
 }
 
 /**
+ * In Mídia: no WhatsApp por QR code (WAHA) botões e listas chegam ao
+ * cliente como opções numeradas ("1. Orçamento"), na mesma ordem em que
+ * aparecem no nó. A resposta volta como texto: "1", "1.", "2)" ou o
+ * nome da opção. Devolve o próximo nó dessa opção, ou null.
+ */
+export function matchTypedOption(
+  node: { node_type: string; config: Record<string, unknown> },
+  text: string,
+): string | null {
+  const opcoes: Array<{ title?: string; next_node_key: string | null }> = [];
+  if (node.node_type === "send_buttons") {
+    const cfg = node.config as unknown as SendButtonsNodeConfig;
+    for (const b of cfg.buttons ?? []) opcoes.push(b as { title?: string; next_node_key: string | null });
+  } else if (node.node_type === "send_list") {
+    const cfg = node.config as unknown as SendListNodeConfig;
+    for (const section of cfg.sections ?? [])
+      for (const r of section.rows ?? []) opcoes.push(r as { title?: string; next_node_key: string | null });
+  } else {
+    return null;
+  }
+  const limpa = (v: string) =>
+    v.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+  const resposta = limpa(text);
+  const numero = /^(\d{1,2})\s*[.)-]?$/.exec(resposta);
+  if (numero) {
+    const opcao = opcoes[Number(numero[1]) - 1];
+    return opcao?.next_node_key ?? null;
+  }
+  const porNome = opcoes.find((o) => o.title && limpa(o.title) === resposta);
+  return porNome?.next_node_key ?? null;
+}
+
+/**
  * Case-insensitive contains/exact match against a list of keywords.
  * Used by the trigger evaluator. Stable enough that the v3 builder
  * UI can preview matches by passing canned strings.
@@ -1022,6 +1055,13 @@ async function handleReplyForActiveRun(
       currentNode.node_type === "send_list")
   ) {
     matched = matchReplyId(currentNode, message.reply_id);
+  } else if (
+    message.kind === "text" &&
+    (currentNode.node_type === "send_buttons" ||
+      currentNode.node_type === "send_list")
+  ) {
+    // In Mídia: resposta digitada às opções numeradas do WhatsApp por QR
+    matched = matchTypedOption(currentNode, message.text);
   } else if (
     message.kind === "text" &&
     currentNode.node_type === "collect_input"

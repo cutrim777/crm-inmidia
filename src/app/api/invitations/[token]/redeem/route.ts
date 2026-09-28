@@ -78,7 +78,7 @@ export async function POST(
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 });
   }
 
   const { data: accountId, error } = await supabase.rpc("redeem_invitation", {

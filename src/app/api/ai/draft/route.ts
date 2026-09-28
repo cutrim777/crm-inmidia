@@ -52,10 +52,10 @@ export async function POST(request: Request) {
       .maybeSingle()
     if (convErr) {
       console.error('[ai/draft] conversation lookup error:', convErr)
-      return NextResponse.json({ error: 'Failed to load conversation' }, { status: 500 })
+      return NextResponse.json({ error: 'Não foi possível carregar a conversa' }, { status: 500 })
     }
     if (!conversation) {
-      return NextResponse.json({ error: 'Conversation not found' }, { status: 404 })
+      return NextResponse.json({ error: 'Conversa não encontrada' }, { status: 404 })
     }
 
     const config = await loadAiConfig(supabase, accountId).catch((err) => {
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
     if (messages.length === 0) {
       return NextResponse.json(
         {
-          error: 'No messages to draft from yet.',
+          error: 'Ainda não há mensagens para a IA sugerir uma resposta.',
           code: 'no_messages',
         },
         { status: 400 },

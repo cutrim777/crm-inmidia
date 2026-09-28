@@ -3,7 +3,7 @@
  * para a porta de entrada que já existe (/api/whatsapp/webhook) cuidar
  * de contato, conversa, mensagem, automação e IA sem mudar nada.
  */
-import { WAHA_PREFIXO, telefoneDe } from './waha'
+import { WAHA_PREFIXO, idCurto, telefoneDe } from './waha'
 
 export interface WahaEvento {
   event?: string
@@ -48,14 +48,14 @@ export function textoDaMensagem(p: Qualquer): string {
   const corpo = txt(p.body) ?? ''
   if (!p.hasMedia) return corpo
   const mime = txt(obj(p.media).mimetype) ?? ''
-  const tipo = mime.startsWith('image/')
-    ? '📷 Imagem'
+  const [tipo, recebido] = mime.startsWith('image/')
+    ? ['📷 Imagem', 'recebida']
     : mime.startsWith('audio/')
-      ? '🎤 Áudio'
+      ? ['🎤 Áudio', 'recebido']
       : mime.startsWith('video/')
-        ? '🎬 Vídeo'
-        : '📎 Arquivo'
-  return corpo ? `[${tipo}] ${corpo}` : `[${tipo} recebido: abra no celular]`
+        ? ['🎬 Vídeo', 'recebido']
+        : ['📎 Arquivo', 'recebido']
+  return corpo ? `[${tipo}] ${corpo}` : `[${tipo} ${recebido}: abra no celular]`
 }
 
 const ACK: Record<number, string> = { 1: 'sent', 2: 'delivered', 3: 'read', 4: 'read', [-1]: 'failed' }
@@ -96,7 +96,28 @@ export function paraFormatoMeta(ev: WahaEvento, telefoneResolvido?: string | nul
     if (!id || !status || !p.fromMe) return null
     const para = txt(p.to) ?? txt(p.from) ?? ''
     return envelope({
-      statuses: [{ id, status, timestamp: String(Math.floor(Date.now() / 1000)), recipient_id: telefoneDe(para) }],
+      statuses: [{ id: idCurto(id), status, timestamp: String(Math.floor(Date.now() / 1000)), recipient_id: telefoneDe(para) }],
+    })
+  }
+
+  if (ev.event === 'message.reaction') {
+    const de = txt(p.from) ?? ''
+    const reacao = obj(p.reaction)
+    const alvo = txt(reacao.messageId)
+    if (p.fromMe || !de || ehGrupoOuStatus(de) || !alvo) return null
+    const telefone = telefoneResolvido ?? remetenteComTelefone(p)
+    const id = txt(p.id)
+    if (!telefone || !id) return null
+    return envelope({
+      contacts: [{ profile: { name: nomeDoRemetente(p) }, wa_id: telefone }],
+      messages: [{
+        from: telefone,
+        id,
+        timestamp: String(typeof p.timestamp === 'number' ? p.timestamp : Math.floor(Date.now() / 1000)),
+        type: 'reaction',
+        // emoji vazio = reação removida (mesmo formato da Meta)
+        reaction: { message_id: idCurto(alvo), emoji: typeof reacao.text === 'string' ? reacao.text : '' },
+      }],
     })
   }
 

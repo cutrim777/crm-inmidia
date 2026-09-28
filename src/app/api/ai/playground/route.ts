@@ -48,7 +48,7 @@ export async function POST(request: Request) {
 
     if (messages.length === 0) {
       return NextResponse.json(
-        { error: 'Send a message to test the agent.' },
+        { error: 'Mande uma mensagem para testar o agente.' },
         { status: 400 },
       )
     }
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     if (!config) {
       return NextResponse.json(
         {
-          error: 'No agent configured yet. Add your provider key in Setup.',
+          error: 'Nenhum agente configurado ainda. Coloque a chave do provedor de IA na configuração.',
           code: 'ai_not_configured',
         },
         { status: 400 },

@@ -1,4 +1,5 @@
 import type { ContentType, SenderType } from "@/types";
+import { BASE_PATH } from "@/lib/base-path";
 
 /**
  * Pure decision + formatting logic for desktop (Web Notifications API)
@@ -181,7 +182,9 @@ export function viewedConversationFromLocation(
   pathname: string,
   search: string,
 ): string | null {
-  if (pathname.replace(/\/+$/, "") !== "/inbox") return null;
+  // In Mídia: o endereço vem com /crm na frente (basePath)
+  const semBase = BASE_PATH && pathname.startsWith(BASE_PATH) ? pathname.slice(BASE_PATH.length) : pathname;
+  if (semBase.replace(/\/+$/, "") !== "/inbox") return null;
   return new URLSearchParams(search).get("c") || null;
 }
 

@@ -47,6 +47,7 @@ import {
   templateBodyParams,
   templateContentText,
 } from '@/lib/whatsapp/template-body';
+import { ehWaha } from '@/lib/whatsapp/waha';
 
 export const MEDIA_KINDS = ['image', 'video', 'document', 'audio'] as const;
 export const VALID_MESSAGE_TYPES = [
@@ -439,6 +440,10 @@ export async function sendMessageToConversation(
     const message =
       err instanceof Error ? err.message : 'Unknown Meta API error';
     console.error('[send-message] Meta send failed for all variants:', message);
+    // In Mídia: erro do WhatsApp por QR code (WAHA) não é da Meta
+    if (ehWaha(config.phone_number_id)) {
+      throw new SendMessageError('meta_error', `Não foi possível enviar pelo WhatsApp: ${message}`, 502);
+    }
     throw new SendMessageError('meta_error', `Meta API error: ${message}`, 502);
   }
 

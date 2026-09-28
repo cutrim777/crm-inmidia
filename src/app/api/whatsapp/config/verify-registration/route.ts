@@ -35,7 +35,7 @@ export async function GET() {
     error: authError,
   } = await supabase.auth.getUser()
   if (authError || !user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    return NextResponse.json({ error: 'Não autorizado. Entre de novo no CRM.' }, { status: 401 })
   }
 
   // whatsapp_config is one-row-per-account post-017. Resolve the
@@ -51,7 +51,7 @@ export async function GET() {
     return NextResponse.json({
       live: false,
       checks: { config_exists: false },
-      message: 'Your profile is not linked to an account.',
+      message: 'Seu usuário não está ligado a uma conta.',
     })
   }
 
@@ -65,7 +65,7 @@ export async function GET() {
     return NextResponse.json({
       live: false,
       checks: { config_exists: false },
-      message: 'No WhatsApp configuration saved yet.',
+      message: 'Nenhum WhatsApp conectado ainda.',
     })
   }
 

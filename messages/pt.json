@@ -1577,7 +1577,7 @@
       "notLive": "inativo",
       "apiCredentialsTitle": "Credenciais da API",
       "apiCredentialsDesc": "Informe suas credenciais da API do WhatsApp Business da Meta.",
-      "phoneNumberId": "Phone Number ID",
+      "phoneNumberId": "ID do número (Phone Number ID)",
       "wabaId": "ID da conta do WhatsApp Business",
       "accessToken": "Token de acesso permanente",
       "accessTokenPlaceholder": "Informe seu token de acesso",

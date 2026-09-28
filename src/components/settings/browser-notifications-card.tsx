@@ -21,6 +21,7 @@ import {
   writeBrowserNotifyPref,
   type BrowserNotifyPermission,
 } from '@/lib/notifications/browser-notify';
+import { withBase } from "@/lib/base-path";
 
 // `Notification.permission` has no change event of its own. Re-read it
 // whenever the tab regains focus (the user may have flipped the site
@@ -88,7 +89,7 @@ export function BrowserNotificationsCard({ className }: { className?: string }) 
     try {
       new Notification(t('testTitle'), {
         body: t('testBody'),
-        icon: '/icon',
+        icon: withBase('/icon.png'),
         tag: 'wacrm-test-notification',
       });
     } catch {

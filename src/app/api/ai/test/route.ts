@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
     const body = await request.json().catch(() => null)
     if (!body || typeof body !== 'object') {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+      return NextResponse.json({ error: 'Envio inválido' }, { status: 400 })
     }
 
     const provider = body.provider as AiProvider
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
         .maybeSingle()
       if (!existing?.api_key) {
         return NextResponse.json(
-          { error: 'Enter an API key to test.' },
+          { error: 'Coloque uma chave de API para testar.' },
           { status: 400 },
         )
       }
@@ -56,7 +56,7 @@ export async function POST(request: Request) {
         apiKeyPlain = decrypt(existing.api_key)
       } catch {
         return NextResponse.json(
-          { error: 'Stored API key could not be decrypted — re-enter your key.' },
+          { error: 'A chave de API salva não pôde ser lida. Coloque a chave de novo.' },
           { status: 400 },
         )
       }
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
       }
       console.error('[ai/test] validation error:', err)
       return NextResponse.json(
-        { error: 'Could not validate the API key.' },
+        { error: 'Não foi possível validar a chave de API.' },
         { status: 400 },
       )
     }

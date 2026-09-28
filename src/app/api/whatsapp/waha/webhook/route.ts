@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       }
 
       let telefone: string | null = null
-      if (ev.event === 'message' && ev.session && ev.payload) {
+      if ((ev.event === 'message' || ev.event === 'message.reaction') && ev.session && ev.payload) {
         const p = ev.payload
         const de = typeof p.from === 'string' ? p.from : ''
         if (!p.fromMe && de.endsWith('@lid') && !remetenteComTelefone(p)) {
