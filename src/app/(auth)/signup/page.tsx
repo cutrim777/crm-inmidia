@@ -46,6 +46,7 @@ function SignupPageInner() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [entrando, setEntrando] = useState(false);
   const supabase = createClient();
 
   const handleSignup = async (e: React.FormEvent) => {
@@ -74,7 +75,7 @@ function SignupPageInner() {
     const emailRedirectTo =
       `${window.location.origin}${withBase("/auth/confirm")}?next=${encodeURIComponent(depois)}`;
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -91,9 +92,33 @@ function SignupPageInner() {
       return;
     }
 
+    // In Mídia: com a confirmação por e-mail desligada no Supabase, a
+    // conta já nasce logada. Aí não tem e-mail para esperar: entra direto.
+    if (data.session) {
+      setEntrando(true);
+      window.location.href = withBase(depois);
+      return;
+    }
+
     setSuccess(true);
     setLoading(false);
   };
+
+  if (entrando) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md border-border bg-card">
+          <CardHeader className="items-center text-center">
+            <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+              <CheckCircle className="h-6 w-6 text-primary" />
+            </div>
+            <CardTitle className="text-xl text-foreground">{t("createdTitle")}</CardTitle>
+            <CardDescription className="text-muted-foreground">{t("createdDesc")}</CardDescription>
+          </CardHeader>
+        </Card>
+      </div>
+    );
+  }
 
   if (success) {
     return (

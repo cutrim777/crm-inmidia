@@ -1917,7 +1917,9 @@
     "step1": "Open your email.",
     "step2": "Click the green “Confirm my email” button.",
     "step3": "Done: you land in the CRM, already signed in.",
-    "spamHint": "Nothing after 2 minutes? Check Spam or Promotions."
+    "spamHint": "Nothing after 2 minutes? Check Spam or Promotions.",
+    "createdTitle": "Account created!",
+    "createdDesc": "All set. Opening the CRM..."
   },
   "ForgotPasswordPage": {
     "checkEmailTitle": "Revisa tu correo",

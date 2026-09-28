@@ -1917,7 +1917,9 @@
     "step1": "Abra seu e-mail e procure a mensagem “Confirm your email address”.",
     "step2": "Clique uma vez só no link azul “Confirm email address”. Não precisa responder nada.",
     "step3": "Pronto: você entra direto no CRM, já logado. Se abrir a tela de entrar, é só usar seu e-mail e senha.",
-    "spamHint": "Não chegou em 2 minutos? Procure na caixa de Spam ou na aba Promoções pelo remetente Supabase Auth."
+    "spamHint": "Não chegou em 2 minutos? Procure na caixa de Spam ou na aba Promoções pelo remetente Supabase Auth.",
+    "createdTitle": "Conta criada!",
+    "createdDesc": "Tudo certo. Entrando no CRM In Mídia..."
   },
   "ForgotPasswordPage": {
     "checkEmailTitle": "Verifique seu e-mail",
