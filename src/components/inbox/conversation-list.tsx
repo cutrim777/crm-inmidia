@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { Conversation, ConversationStatus, Tag } from "@/types";
 import { Search, ChevronDown, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useTranslations } from "next-intl";
 import { Input } from "@/components/ui/input";
 import {
@@ -445,7 +446,7 @@ function ConversationItem({
   }, [onSelect, conversation]);
 
   const timeAgo = conversation.last_message_at
-    ? formatDistanceToNow(new Date(conversation.last_message_at), {
+    ? formatDistanceToNow(new Date(conversation.last_message_at), { locale: ptBR,
         addSuffix: false,
       })
     : "";

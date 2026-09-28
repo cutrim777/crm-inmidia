@@ -31,8 +31,8 @@ export interface AutomationTemplateDefinition {
 export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefinition> = {
   welcome_message: {
     slug: 'welcome_message',
-    name: 'Welcome Message',
-    description: 'Auto-reply to first-time contacts with a greeting.',
+    name: 'Mensagem de boas-vindas',
+    description: 'Responde sozinho quem manda a primeira mensagem.',
     // first_inbound_message (added in PR #33) catches both brand-new
     // contacts AND manually-added/imported contacts on their first-ever
     // reply, which is what a user setting up a "welcome" automation
@@ -44,7 +44,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
       {
         step_type: 'send_message',
         step_config: {
-          text: "Hi! 👋 Thanks for reaching out. We'll get back to you shortly.",
+          text: "Olá! 👋 Obrigado pelo contato. Já já a gente te responde por aqui.",
         },
       },
       {
@@ -55,8 +55,8 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   },
   out_of_office: {
     slug: 'out_of_office',
-    name: 'Out of Office',
-    description: 'Auto-reply during off-hours so nobody is left waiting.',
+    name: 'Fora do horário',
+    description: 'Responde sozinho fora do expediente, para ninguém ficar sem retorno.',
     trigger_type: 'new_message_received',
     trigger_config: {},
     steps: [
@@ -71,7 +71,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Thanks for your message! Our team is offline right now (9am–6pm) and will reply first thing tomorrow.",
+            "Recebemos sua mensagem! Nosso atendimento é das 9h às 18h, e amanhã cedo a gente te responde.",
         },
         parent_index: 0,
         branch: 'yes',
@@ -80,11 +80,11 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   },
   lead_qualifier: {
     slug: 'lead_qualifier',
-    name: 'Lead Qualifier',
-    description: 'Ask qualification questions to filter inbound leads.',
+    name: 'Qualificar lead',
+    description: 'Faz a primeira pergunta de qualificação quando o cliente pede preço.',
     trigger_type: 'keyword_match',
     trigger_config: {
-      keywords: ['pricing', 'quote', 'buy'],
+      keywords: ['preço', 'valor', 'orçamento', 'quanto custa'],
       match_type: 'contains',
     },
     steps: [
@@ -92,7 +92,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Great — happy to help with pricing! Quick question: roughly how many seats are you looking for?",
+            "Que bom que você quer saber os valores! Para eu te passar certinho: qual é o seu negócio e quantas pessoas trabalham com você?",
         },
       },
       {
@@ -107,8 +107,8 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
   },
   follow_up_reminder: {
     slug: 'follow_up_reminder',
-    name: 'Follow-up Reminder',
-    description: 'Send a nudge if a contact has not replied within 24 hours.',
+    name: 'Lembrete de retorno',
+    description: 'Manda um lembrete se o contato não responder em 24 horas.',
     trigger_type: 'new_message_received',
     trigger_config: {},
     steps: [
@@ -120,7 +120,7 @@ export const AUTOMATION_TEMPLATES: Record<TemplateSlug, AutomationTemplateDefini
         step_type: 'send_message',
         step_config: {
           text:
-            "Just circling back — did you have any other questions for us? Happy to help!",
+            "Passando para saber se ficou alguma dúvida. Posso te ajudar em algo?",
         },
       },
     ],
